@@ -1,2 +1,5 @@
 mlb.py
 gameday.py
+PLAN.md
+.claude/*
+scripts/__pycache__/*

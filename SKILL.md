@@ -1,15 +1,16 @@
 ---
 name: baseball
 description: >
-  Fetch MLB game schedules, live game status, and box scores via the MLB Stats API.
-  Use when the user asks about baseball games, scores, who is playing today,
-  game results, live updates, pitching matchups, or MLB schedule information.
+  Fetch MLB game schedules, live game status, box scores, player search, and season
+  statistics via the MLB Stats API. Use when the user asks about baseball games,
+  scores, who is playing today, game results, live updates, pitching matchups,
+  MLB schedule information, player lookups, or player stats.
 metadata: {"openclaw":{"emoji":"⚾","requires":{"bins":["python3"]}}}
 ---
 
 # Baseball — MLB Game Tracker
 
-Fetch real-time MLB game schedules, live game status, and box scores via the MLB Stats API.
+Fetch real-time MLB game schedules, live game status, box scores, player search, and season statistics via the MLB Stats API.
 
 ## Quick Start
 
@@ -25,6 +26,18 @@ python scripts/baseball.py score 718415
 
 # Box score for last Tuesday's Phillies game
 python scripts/baseball.py score PHI --date 02/15/2026
+
+# Search for a player
+python scripts/baseball.py player Judge
+
+# Search with team filter
+python scripts/baseball.py player Wheeler --team PHI
+
+# Player season stats by ID
+python scripts/baseball.py stats 592450
+
+# Player season stats by name
+python scripts/baseball.py stats Aaron Judge --season 2025
 ```
 
 ## Usage
@@ -94,6 +107,38 @@ python scripts/baseball.py score PHI --date 02/15/2026
 python scripts/baseball.py score PHI --format json
 ```
 
+### Search Players
+
+```bash
+# Search by last name
+python scripts/baseball.py player Judge
+
+# Search by full name
+python scripts/baseball.py player Aaron Judge
+
+# Filter by team
+python scripts/baseball.py player Wheeler --team PHI
+
+# JSON output
+python scripts/baseball.py player Judge --format json
+```
+
+### Player Stats
+
+```bash
+# By player ID (from player search results)
+python scripts/baseball.py stats 592450
+
+# By player name (auto-resolves if unique match)
+python scripts/baseball.py stats Aaron Judge
+
+# Specific season
+python scripts/baseball.py stats Aaron Judge --season 2024
+
+# JSON output
+python scripts/baseball.py stats 592450 --format json
+```
+
 ## Output Format
 
 ### Text (Default)
@@ -132,6 +177,33 @@ PHI    0  1  0  2  0  0  2  0  1    6  11  0
 NYM    2  0  0  1  2  0  0  0  0    4   9  1
 ```
 
+**player:**
+
+```
+Player Search: "Judge"
+ID         Name                      Pos   Team                 #     B/T   Age
+--------------------------------------------------------------------------------
+592450     Aaron Judge               RF    NYY Yankees          99    R/R   33
+```
+
+**stats (batting):**
+
+```
+Aaron Judge  #99  RF  |  New York Yankees  |  R/R  |  Age 33
+2025 Season Batting Statistics
+  G     AB    R     H    2B   3B   HR   RBI   SB   BB    K    AVG    OBP    SLG    OPS
+  152   541   137   179  30   2    53   114   12   124   160  .331   .457   .688   1.145
+```
+
+**stats (pitching):**
+
+```
+Zack Wheeler  #45  P  |  Philadelphia Phillies  |  L/R  |  Age 35
+2025 Season Pitching Statistics
+  G    GS   W    L    ERA    IP      H    R    ER   HR   SO   BB   SV   HLD  WHIP   K/9    BB/9
+  30   30   14   6    2.85   198.1   155  68   63   18   210  42   0    0    0.99   9.55   1.91
+```
+
 ### JSON
 
 ```json
@@ -154,6 +226,29 @@ NYM    2  0  0  1  2  0  0  0  0    4   9  1
 }
 ```
 
+**player search (JSON):**
+
+```json
+{
+  "query": "Judge",
+  "players": [
+    {
+      "id": 592450,
+      "full_name": "Aaron Judge",
+      "position": "RF",
+      "position_name": "Right Fielder",
+      "primary_number": "99",
+      "bats": "R",
+      "throws": "R",
+      "age": 33,
+      "team": "New York Yankees",
+      "team_abbreviation": "NYY",
+      "active": true
+    }
+  ]
+}
+```
+
 ## Output Fields
 
 - **game_pk** — Unique MLB game identifier
@@ -169,6 +264,13 @@ NYM    2  0  0  1  2  0  0  0  0    4   9  1
 - **line_score** — Inning-by-inning runs with R/H/E totals
 - **venue** — Ballpark name
 - **start_time** — Scheduled start in local time (ISO 8601)
+- **id** — MLB player identifier (use with `stats` command)
+- **full_name** — Player's full name
+- **position** — Position abbreviation (RF, P, C, SS, etc.)
+- **primary_number** — Jersey number
+- **bats / throws** — Batting side and throwing hand (R, L, S)
+- **batting** — Season batting stats (avg, obp, slg, ops, hr, rbi, etc.)
+- **pitching** — Season pitching stats (era, wins, losses, whip, strikeouts, etc.)
 
 ## Team Abbreviations
 
@@ -182,3 +284,6 @@ ARI, ATL, BAL, BOS, CHC, CWS, CIN, CLE, COL, DET, HOU, KC, LAA, LAD, MIA, MIL, M
 - The MLB Stats API is free and open — no API key or authentication is required. Please don't abuse it. Excessive requests (rapid polling, bulk scraping, etc.) may result in your IP being blocked. When checking live games, poll no more than once every 15 seconds.
 - The `live` and `score` commands accept either a numeric game PK or a team abbreviation. When using an abbreviation, the script looks up today's schedule to find the team's game. Use `--date MM/DD/YYYY` to look up a game on a different date.
 - The `games` text output includes a Game ID column. Use this ID with `score` or `live` to drill into a specific game — especially useful for doubleheaders where team abbreviation alone is ambiguous.
+- The `player` command searches active MLB players. Use `stats <ID>` with the player ID from search results to view season statistics.
+- The `stats` command accepts either a numeric player ID or a player name. If a name matches multiple players, you'll be prompted to use a specific ID.
+- During the offseason, use `--season` to view stats from a previous year (e.g., `--season 2025`).

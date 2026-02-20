@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-Baseball — MLB game schedules, live status, and box scores.
+Baseball — MLB game schedules, live status, box scores, player search, and stats.
 
 Usage:
     python scripts/baseball.py games [--team PHI] [--date MM/DD/YYYY] [--format text|json]
     python scripts/baseball.py live <gamePk_or_team> [--date MM/DD/YYYY] [--format text|json]
     python scripts/baseball.py score <gamePk_or_team> [--date MM/DD/YYYY] [--format text|json]
+    python scripts/baseball.py player <name> [--team PHI] [--format text|json]
+    python scripts/baseball.py stats <player> [--season 2025] [--format text|json]
 """
 
 import argparse
@@ -13,7 +15,10 @@ import json
 import sys
 from datetime import datetime, timedelta
 
-from mlb_api import fetch_schedule, fetch_live_game, lookup_team, MLB_TEAMS
+from mlb_api import (
+    fetch_schedule, fetch_live_game, lookup_team, MLB_TEAMS,
+    search_players, fetch_player_stats,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -310,12 +315,148 @@ def cmd_teams(args):
 
 
 # ---------------------------------------------------------------------------
+# player subcommand
+# ---------------------------------------------------------------------------
+
+def cmd_player(args):
+    name = " ".join(args.name)
+    team_abbr = None
+    if args.team:
+        team_abbr, _ = lookup_team(args.team)
+        if team_abbr is None:
+            print(f"Error: Unknown team '{args.team}'.", file=sys.stderr)
+            sys.exit(1)
+
+    players = search_players(name, team_abbr=team_abbr)
+
+    if not players:
+        msg = f'No active players found for "{name}"'
+        if team_abbr:
+            msg += f" on {team_abbr}"
+        if args.format == "json":
+            print(json.dumps({"query": name, "players": []}, indent=2))
+        else:
+            print(msg)
+        return
+
+    if args.format == "json":
+        output = {
+            "query": name,
+            "players": [p.to_dict() for p in players],
+        }
+        print(json.dumps(output, indent=2))
+    else:
+        _output_player_search_text(name, players)
+
+
+def _output_player_search_text(query, players):
+    print(f'Player Search: "{query}"')
+    print(f"{'ID':<11}{'Name':<26}{'Pos':<6}{'Team':<21}{'#':<6}{'B/T':<6}{'Age'}")
+    print("-" * 80)
+    for p in players:
+        team_label = f"{p.team_abbreviation} {p.team_name.split()[-1]}" if p.team_abbreviation else p.team_name
+        bt = f"{p.bats}/{p.throws}" if p.bats and p.throws else ""
+        num = p.primary_number if p.primary_number else ""
+        age = str(p.current_age) if p.current_age else ""
+        print(f"{p.id:<11}{p.full_name:<26}{p.position:<6}{team_label:<21}{num:<6}{bt:<6}{age}")
+    if len(players) > 1:
+        print(f"\nUse 'stats <ID>' to view a player's season statistics.")
+
+
+# ---------------------------------------------------------------------------
+# stats subcommand
+# ---------------------------------------------------------------------------
+
+def cmd_stats(args):
+    player_arg = " ".join(args.player)
+    season = args.season if args.season else datetime.now().year
+
+    # Determine player ID: numeric or name search
+    if player_arg.isdigit():
+        player_id = int(player_arg)
+    else:
+        players = search_players(player_arg)
+        if not players:
+            print(f'Error: No active players found for "{player_arg}".', file=sys.stderr)
+            sys.exit(1)
+        if len(players) > 1:
+            print(f'Multiple players match "{player_arg}". Use a player ID:', file=sys.stderr)
+            for p in players:
+                team_label = f"{p.team_abbreviation} {p.team_name.split()[-1]}" if p.team_abbreviation else p.team_name
+                print(f"  {p.id:<11}{p.full_name:<26}{p.position:<6}{team_label}", file=sys.stderr)
+            sys.exit(1)
+        player_id = players[0].id
+
+    result = fetch_player_stats(player_id, season=season)
+    if result is None:
+        print(f"Error: Could not fetch stats for player {player_id}.", file=sys.stderr)
+        sys.exit(1)
+
+    if args.format == "json":
+        output = result.to_dict()
+        output["season"] = str(season)
+        print(json.dumps(output, indent=2))
+    else:
+        _output_stats_text(result, season)
+
+
+def _output_stats_text(result, season):
+    p = result.player
+    team_label = p.team_name if p.team_name else "Free Agent"
+    num = f"  #{p.primary_number}" if p.primary_number else ""
+    pos = f"  {p.position}" if p.position else ""
+    bt = f"{p.bats}/{p.throws}" if p.bats and p.throws else ""
+    age = f"Age {p.current_age}" if p.current_age else ""
+    parts = [s for s in [bt, age] if s]
+    extra = "  |  ".join(parts)
+    print(f"{p.full_name}{num}{pos}  |  {team_label}  |  {extra}")
+
+    if result.batting:
+        _output_batting_text(result.batting, season)
+    if result.pitching:
+        _output_pitching_text(result.pitching, season)
+    if not result.batting and not result.pitching:
+        print(f"No stats available for {season} season.")
+
+
+def _output_batting_text(b, season):
+    print(f"{season} Season Batting Statistics")
+    print(
+        f"  {'G':<6}{'AB':<6}{'R':<6}{'H':<5}{'2B':<5}{'3B':<5}"
+        f"{'HR':<5}{'RBI':<6}{'SB':<5}{'BB':<6}{'K':<6}"
+        f"{'AVG':<7}{'OBP':<7}{'SLG':<7}{'OPS'}"
+    )
+    print(
+        f"  {b.games_played:<6}{b.at_bats:<6}{b.runs:<6}{b.hits:<5}"
+        f"{b.doubles:<5}{b.triples:<5}{b.home_runs:<5}{b.rbi:<6}"
+        f"{b.stolen_bases:<5}{b.walks:<6}{b.strikeouts:<6}"
+        f"{b.avg:<7}{b.obp:<7}{b.slg:<7}{b.ops}"
+    )
+
+
+def _output_pitching_text(pit, season):
+    print(f"{season} Season Pitching Statistics")
+    print(
+        f"  {'G':<5}{'GS':<5}{'W':<5}{'L':<5}{'ERA':<7}{'IP':<8}"
+        f"{'H':<5}{'R':<5}{'ER':<5}{'HR':<5}{'SO':<5}{'BB':<5}"
+        f"{'SV':<5}{'HLD':<5}{'WHIP':<7}{'K/9':<7}{'BB/9'}"
+    )
+    print(
+        f"  {pit.games_played:<5}{pit.games_started:<5}{pit.wins:<5}{pit.losses:<5}"
+        f"{pit.era:<7}{pit.innings_pitched:<8}{pit.hits:<5}{pit.runs:<5}"
+        f"{pit.earned_runs:<5}{pit.home_runs:<5}{pit.strikeouts:<5}{pit.walks:<5}"
+        f"{pit.saves:<5}{pit.holds:<5}{pit.whip:<7}{pit.strikeouts_per_9:<7}"
+        f"{pit.walks_per_9}"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(
-        description="MLB game schedules, live status, and box scores"
+        description="MLB game schedules, live status, box scores, player search, and stats"
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -354,6 +495,24 @@ def main():
         help="Output format (default: text)"
     )
 
+    # player
+    player_parser = subparsers.add_parser("player", help="Search for a player by name")
+    player_parser.add_argument("name", nargs="+", help="Player name (e.g., Judge or Aaron Judge)")
+    player_parser.add_argument("--team", help="Filter by team abbreviation (e.g., PHI)")
+    player_parser.add_argument(
+        "--format", choices=["text", "json"], default="text",
+        help="Output format (default: text)"
+    )
+
+    # stats
+    stats_parser = subparsers.add_parser("stats", help="Show player season statistics")
+    stats_parser.add_argument("player", nargs="+", help="Player ID (numeric) or name (e.g., Aaron Judge)")
+    stats_parser.add_argument("--season", type=int, help="Season year (default: current year)")
+    stats_parser.add_argument(
+        "--format", choices=["text", "json"], default="text",
+        help="Output format (default: text)"
+    )
+
     args = parser.parse_args()
 
     if args.command == "teams":
@@ -364,6 +523,10 @@ def main():
         cmd_live(args)
     elif args.command == "score":
         cmd_score(args)
+    elif args.command == "player":
+        cmd_player(args)
+    elif args.command == "stats":
+        cmd_stats(args)
 
 
 if __name__ == "__main__":

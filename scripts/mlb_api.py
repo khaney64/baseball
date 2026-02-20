@@ -10,11 +10,15 @@ import json
 import sys
 from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
+from urllib.parse import quote
 from urllib.request import urlopen
 
 
 SCHEDULE_URL = "https://statsapi.mlb.com/api/v1/schedule/games"
 LIVE_FEED_URL = "https://statsapi.mlb.com/api/v1.1/game/{game_pk}/feed/live"
+PLAYER_SEARCH_URL = "https://statsapi.mlb.com/api/v1/people/search"
+PLAYER_URL = "https://statsapi.mlb.com/api/v1/people/{player_id}"
+PLAYER_STATS_URL = "https://statsapi.mlb.com/api/v1/people/{player_id}/stats"
 TIMEOUT_SECONDS = 30
 
 # All 30 MLB teams: abbreviation -> {id, name}
@@ -312,6 +316,165 @@ class GameSummary:
         }
 
 
+class PlayerInfo:
+    """Player profile from search or people endpoint."""
+
+    def __init__(self, data):
+        self.id = data.get("id", 0)
+        self.full_name = data.get("fullName", "")
+        self.first_name = data.get("firstName", "")
+        self.last_name = data.get("lastName", "")
+        self.active = data.get("active", False)
+        self.primary_number = data.get("primaryNumber", "")
+        self.height = data.get("height", "")
+        self.weight = data.get("weight", 0)
+        self.birth_date = data.get("birthDate", "")
+        self.current_age = data.get("currentAge", 0)
+        self.mlb_debut_date = data.get("mlbDebutDate", "")
+        pos = data.get("primaryPosition", {})
+        self.position = pos.get("abbreviation", "")
+        self.position_name = pos.get("name", "")
+        self.bats = data.get("batSide", {}).get("code", "")
+        self.throws = data.get("pitchHand", {}).get("code", "")
+        team = data.get("currentTeam", {})
+        self.team_id = team.get("id", 0)
+        self.team_name = team.get("name", "")
+        self.team_abbreviation = _TEAM_ID_TO_ABBR.get(self.team_id, "")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "full_name": self.full_name,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "active": self.active,
+            "primary_number": self.primary_number,
+            "height": self.height,
+            "weight": self.weight,
+            "birth_date": self.birth_date,
+            "age": self.current_age,
+            "mlb_debut_date": self.mlb_debut_date,
+            "position": self.position,
+            "position_name": self.position_name,
+            "bats": self.bats,
+            "throws": self.throws,
+            "team_id": self.team_id,
+            "team": self.team_name,
+            "team_abbreviation": self.team_abbreviation,
+        }
+
+
+class BattingStats:
+    """Season batting statistics."""
+
+    def __init__(self, data):
+        stat = data.get("stat", {})
+        self.season = data.get("season", "")
+        self.team_name = data.get("team", {}).get("name", "")
+        self.games_played = stat.get("gamesPlayed", 0)
+        self.at_bats = stat.get("atBats", 0)
+        self.plate_appearances = stat.get("plateAppearances", 0)
+        self.runs = stat.get("runs", 0)
+        self.hits = stat.get("hits", 0)
+        self.doubles = stat.get("doubles", 0)
+        self.triples = stat.get("triples", 0)
+        self.home_runs = stat.get("homeRuns", 0)
+        self.rbi = stat.get("rbi", 0)
+        self.stolen_bases = stat.get("stolenBases", 0)
+        self.walks = stat.get("baseOnBalls", 0)
+        self.strikeouts = stat.get("strikeOuts", 0)
+        self.avg = stat.get("avg", ".000")
+        self.obp = stat.get("obp", ".000")
+        self.slg = stat.get("slg", ".000")
+        self.ops = stat.get("ops", ".000")
+
+    def to_dict(self):
+        return {
+            "season": self.season,
+            "team_name": self.team_name,
+            "games_played": self.games_played,
+            "at_bats": self.at_bats,
+            "plate_appearances": self.plate_appearances,
+            "runs": self.runs,
+            "hits": self.hits,
+            "doubles": self.doubles,
+            "triples": self.triples,
+            "home_runs": self.home_runs,
+            "rbi": self.rbi,
+            "stolen_bases": self.stolen_bases,
+            "walks": self.walks,
+            "strikeouts": self.strikeouts,
+            "avg": self.avg,
+            "obp": self.obp,
+            "slg": self.slg,
+            "ops": self.ops,
+        }
+
+
+class PitchingStats:
+    """Season pitching statistics."""
+
+    def __init__(self, data):
+        stat = data.get("stat", {})
+        self.season = data.get("season", "")
+        self.team_name = data.get("team", {}).get("name", "")
+        self.games_played = stat.get("gamesPlayed", 0)
+        self.games_started = stat.get("gamesStarted", 0)
+        self.wins = stat.get("wins", 0)
+        self.losses = stat.get("losses", 0)
+        self.era = stat.get("era", "0.00")
+        self.innings_pitched = stat.get("inningsPitched", "0.0")
+        self.hits = stat.get("hits", 0)
+        self.runs = stat.get("runs", 0)
+        self.earned_runs = stat.get("earnedRuns", 0)
+        self.home_runs = stat.get("homeRuns", 0)
+        self.strikeouts = stat.get("strikeOuts", 0)
+        self.walks = stat.get("baseOnBalls", 0)
+        self.saves = stat.get("saves", 0)
+        self.holds = stat.get("holds", 0)
+        self.whip = stat.get("whip", "0.00")
+        self.strikeouts_per_9 = stat.get("strikeoutsPer9Inn", "0.00")
+        self.walks_per_9 = stat.get("walksPer9Inn", "0.00")
+
+    def to_dict(self):
+        return {
+            "season": self.season,
+            "team_name": self.team_name,
+            "games_played": self.games_played,
+            "games_started": self.games_started,
+            "wins": self.wins,
+            "losses": self.losses,
+            "era": self.era,
+            "innings_pitched": self.innings_pitched,
+            "hits": self.hits,
+            "runs": self.runs,
+            "earned_runs": self.earned_runs,
+            "home_runs": self.home_runs,
+            "strikeouts": self.strikeouts,
+            "walks": self.walks,
+            "saves": self.saves,
+            "holds": self.holds,
+            "whip": self.whip,
+            "strikeouts_per_9": self.strikeouts_per_9,
+            "walks_per_9": self.walks_per_9,
+        }
+
+
+class PlayerStats:
+    """Container for player info and season stats."""
+
+    def __init__(self, player, batting=None, pitching=None):
+        self.player = player
+        self.batting = batting
+        self.pitching = pitching
+
+    def to_dict(self):
+        result = {"player": self.player.to_dict()}
+        result["batting"] = self.batting.to_dict() if self.batting else None
+        result["pitching"] = self.pitching.to_dict() if self.pitching else None
+        return result
+
+
 # ---------------------------------------------------------------------------
 # API functions
 # ---------------------------------------------------------------------------
@@ -368,3 +531,73 @@ def lookup_team(query):
             return abbr, info
 
     return None, None
+
+
+def search_players(name, team_abbr=None):
+    """Search for active MLB players by name.
+
+    Args:
+        name: Player name (or partial name) to search for.
+        team_abbr: Optional team abbreviation to filter results.
+
+    Returns list of PlayerInfo.
+    """
+    url = f"{PLAYER_SEARCH_URL}?names={quote(name)}&hydrate=currentTeam"
+    data = _fetch_json(url)
+    if data is None:
+        return []
+
+    players = []
+    for row in data.get("people", []):
+        if not row.get("active", False):
+            continue
+        player = PlayerInfo(row)
+        if team_abbr and player.team_abbreviation != team_abbr.upper():
+            continue
+        players.append(player)
+    return players
+
+
+def fetch_player_stats(player_id, season=None):
+    """Fetch player info and season stats.
+
+    Args:
+        player_id: MLB player ID.
+        season: Year (int or str). Defaults to current year.
+
+    Returns PlayerStats or None.
+    """
+    if season is None:
+        season = datetime.now().year
+
+    # Fetch player info
+    info_url = f"{PLAYER_URL.format(player_id=player_id)}?hydrate=currentTeam"
+    info_data = _fetch_json(info_url)
+    if info_data is None:
+        return None
+    people = info_data.get("people", [])
+    if not people:
+        return None
+    player = PlayerInfo(people[0])
+
+    # Fetch stats (hitting + pitching in one call)
+    stats_url = (
+        f"{PLAYER_STATS_URL.format(player_id=player_id)}"
+        f"?stats=season&season={season}&group=hitting,pitching"
+    )
+    stats_data = _fetch_json(stats_url)
+
+    batting = None
+    pitching = None
+    if stats_data:
+        for group in stats_data.get("stats", []):
+            group_name = group.get("group", {}).get("displayName", "")
+            splits = group.get("splits", [])
+            if not splits:
+                continue
+            if group_name == "hitting":
+                batting = BattingStats(splits[-1])
+            elif group_name == "pitching":
+                pitching = PitchingStats(splits[-1])
+
+    return PlayerStats(player, batting, pitching)
