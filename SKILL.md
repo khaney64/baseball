@@ -22,6 +22,9 @@ python scripts/baseball.py live PHI
 
 # Box score for a specific game
 python scripts/baseball.py score 718415
+
+# Box score for last Tuesday's Phillies game
+python scripts/baseball.py score PHI --date 02/15/2026
 ```
 
 ## Usage
@@ -66,6 +69,9 @@ python scripts/baseball.py live PHI
 # By game PK
 python scripts/baseball.py live 718415
 
+# Game status from a specific date
+python scripts/baseball.py live NYY --date 02/10/2026
+
 # JSON output
 python scripts/baseball.py live PHI --format json
 ```
@@ -75,11 +81,14 @@ python scripts/baseball.py live PHI --format json
 Show the line score for any game (in-progress or final).
 
 ```bash
-# By team abbreviation
+# By team abbreviation (today's game)
 python scripts/baseball.py score PHI
 
-# By game PK
+# By game PK (works for any game, past or present)
 python scripts/baseball.py score 718415
+
+# By team abbreviation for a past date
+python scripts/baseball.py score PHI --date 02/15/2026
 
 # JSON output
 python scripts/baseball.py score PHI --format json
@@ -93,10 +102,10 @@ python scripts/baseball.py score PHI --format json
 
 ```
 MLB Games - 09/15/2025
-Away              Record     Home              Record     Time       Status
---------------------------------------------------------------------------------
-PHI Phillies      85-62      NYM Mets          80-67      7:10 PM    In Progress
-BOS Red Sox       72-75      TB Rays           78-69      6:40 PM    Final (5-3)
+Away              Record     Home              Record     Time       Status               Game ID
+-----------------------------------------------------------------------------------------------
+PHI Phillies      85-62      NYM Mets          80-67      7:10 PM    In Progress          718415
+BOS Red Sox       72-75      TB Rays           78-69      6:40 PM    Final (5-3)          718420
 ```
 
 **live:**
@@ -171,4 +180,5 @@ ARI, ATL, BAL, BOS, CHC, CWS, CIN, CLE, COL, DET, HOU, KC, LAA, LAD, MIA, MIL, M
 
 - Data is sourced from the MLB Stats API. See [copyright](http://gdx.mlb.com/components/copyright.txt).
 - The MLB Stats API is free and open — no API key or authentication is required. Please don't abuse it. Excessive requests (rapid polling, bulk scraping, etc.) may result in your IP being blocked. When checking live games, poll no more than once every 15 seconds.
-- The `live` and `score` commands accept either a numeric game PK or a team abbreviation. When using an abbreviation, the script looks up today's schedule to find the team's game.
+- The `live` and `score` commands accept either a numeric game PK or a team abbreviation. When using an abbreviation, the script looks up today's schedule to find the team's game. Use `--date MM/DD/YYYY` to look up a game on a different date.
+- The `games` text output includes a Game ID column. Use this ID with `score` or `live` to drill into a specific game — especially useful for doubleheaders where team abbreviation alone is ambiguous.

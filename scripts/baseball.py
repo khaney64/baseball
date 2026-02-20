@@ -4,8 +4,8 @@ Baseball — MLB game schedules, live status, and box scores.
 
 Usage:
     python scripts/baseball.py games [--team PHI] [--date MM/DD/YYYY] [--format text|json]
-    python scripts/baseball.py live <gamePk_or_team> [--format text|json]
-    python scripts/baseball.py score <gamePk_or_team> [--format text|json]
+    python scripts/baseball.py live <gamePk_or_team> [--date MM/DD/YYYY] [--format text|json]
+    python scripts/baseball.py score <gamePk_or_team> [--date MM/DD/YYYY] [--format text|json]
 """
 
 import argparse
@@ -36,11 +36,12 @@ def _ordinal(n):
     return f"{n}{suffix}"
 
 
-def _resolve_game_pk(arg):
+def _resolve_game_pk(arg, date=None):
     """Resolve a game PK from a numeric string or team abbreviation.
 
     If arg is numeric, return it as an integer.
-    If alphabetic, look up today's schedule for that team's game.
+    If alphabetic, look up the schedule for that team's game on the given date
+    (defaults to today).
     """
     if arg.isdigit():
         return int(arg)
@@ -52,18 +53,18 @@ def _resolve_game_pk(arg):
         sys.exit(1)
 
     team_name = team_info["name"]
-    today = datetime.now().strftime("%m/%d/%Y")
-    games = fetch_schedule(today)
+    lookup_date = date if date else datetime.now().strftime("%m/%d/%Y")
+    games = fetch_schedule(lookup_date)
 
     if not games:
-        print(f"Error: No games scheduled for today ({today}).", file=sys.stderr)
+        print(f"Error: No games scheduled for {lookup_date}.", file=sys.stderr)
         sys.exit(1)
 
     for game in games:
         if game.away_team.abbreviation == abbr or game.home_team.abbreviation == abbr:
             return game.game_pk
 
-    print(f"Error: {team_name} ({abbr}) is not playing today ({today}).", file=sys.stderr)
+    print(f"Error: {team_name} ({abbr}) is not playing on {lookup_date}.", file=sys.stderr)
     sys.exit(1)
 
 
@@ -137,9 +138,9 @@ def cmd_games(args):
 
 def _output_games_text(date_label, games, multi_day=False):
     print(f"MLB Games - {date_label}")
-    header = f"{'Away':<17} {'Record':<10} {'Home':<17} {'Record':<10} {'Time':<10} {'Status'}"
+    header = f"{'Away':<17} {'Record':<10} {'Home':<17} {'Record':<10} {'Time':<10} {'Status':<20} {'Game ID'}"
     print(header)
-    print("-" * 80)
+    print("-" * 95)
 
     current_date = None
     for g in games:
@@ -159,7 +160,7 @@ def _output_games_text(date_label, games, multi_day=False):
         print(
             f"{away_label:<17} {g.away_record:<10} "
             f"{home_label:<17} {g.home_record:<10} "
-            f"{time_str:<10} {status}"
+            f"{time_str:<10} {status:<20} {g.game_pk}"
         )
 
 
@@ -168,7 +169,7 @@ def _output_games_text(date_label, games, multi_day=False):
 # ---------------------------------------------------------------------------
 
 def cmd_live(args):
-    game_pk = _resolve_game_pk(args.game)
+    game_pk = _resolve_game_pk(args.game, date=args.date)
     game = fetch_live_game(game_pk)
 
     if game is None:
@@ -262,7 +263,7 @@ def _output_linescore_text(game):
 # ---------------------------------------------------------------------------
 
 def cmd_score(args):
-    game_pk = _resolve_game_pk(args.game)
+    game_pk = _resolve_game_pk(args.game, date=args.date)
     game = fetch_live_game(game_pk)
 
     if game is None:
@@ -338,6 +339,7 @@ def main():
     # live
     live_parser = subparsers.add_parser("live", help="Live game status with count, runners, matchup")
     live_parser.add_argument("game", help="Game PK (numeric) or team abbreviation (e.g., PHI)")
+    live_parser.add_argument("--date", help="Date to look up team's game (MM/DD/YYYY, default: today)")
     live_parser.add_argument(
         "--format", choices=["text", "json"], default="text",
         help="Output format (default: text)"
@@ -346,6 +348,7 @@ def main():
     # score
     score_parser = subparsers.add_parser("score", help="Box score for a game")
     score_parser.add_argument("game", help="Game PK (numeric) or team abbreviation (e.g., PHI)")
+    score_parser.add_argument("--date", help="Date to look up team's game (MM/DD/YYYY, default: today)")
     score_parser.add_argument(
         "--format", choices=["text", "json"], default="text",
         help="Output format (default: text)"
