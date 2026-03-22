@@ -16,28 +16,28 @@ Fetch real-time MLB game schedules, live game status, box scores, player search,
 
 ```bash
 # List today's games
-python scripts/baseball.py games
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py games
 
 # Live game status for the Phillies
-python scripts/baseball.py live PHI
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py live PHI
 
 # Box score for a specific game
-python scripts/baseball.py score 718415
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py score 718415
 
 # Box score for last Tuesday's Phillies game
-python scripts/baseball.py score PHI --date 02/15/2026
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py score PHI --date 02/15/2026
 
 # Search for a player
-python scripts/baseball.py player Judge
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py player Judge
 
 # Search with team filter
-python scripts/baseball.py player Wheeler --team PHI
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py player Wheeler --team PHI
 
 # Player season stats by ID
-python scripts/baseball.py stats 592450
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py stats 592450
 
 # Player season stats by name
-python scripts/baseball.py stats Aaron Judge --season 2025
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py stats Aaron Judge --season 2025
 ```
 
 ## Usage
@@ -46,29 +46,29 @@ python scripts/baseball.py stats Aaron Judge --season 2025
 
 ```bash
 # Show all team abbreviations
-python scripts/baseball.py teams
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py teams
 ```
 
 ### List Games
 
 ```bash
 # Today's games
-python scripts/baseball.py games
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py games
 
 # Games on a specific date
-python scripts/baseball.py games --date 09/15/2025
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py games --date 09/15/2025
 
 # Next 7 days of games
-python scripts/baseball.py games --days 7
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py games --days 7
 
 # Upcoming week for a specific team
-python scripts/baseball.py games --team PHI --days 7
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py games --team PHI --days 7
 
 # Filter by team
-python scripts/baseball.py games --team PHI
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py games --team PHI
 
 # JSON output
-python scripts/baseball.py games --format json
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py games --format json
 ```
 
 ### Live Game Status
@@ -77,16 +77,16 @@ Show live count, runners, batter/pitcher matchup, and line score for an in-progr
 
 ```bash
 # By team abbreviation (finds today's game)
-python scripts/baseball.py live PHI
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py live PHI
 
 # By game PK
-python scripts/baseball.py live 718415
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py live 718415
 
 # Game status from a specific date
-python scripts/baseball.py live NYY --date 02/10/2026
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py live NYY --date 02/10/2026
 
 # JSON output
-python scripts/baseball.py live PHI --format json
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py live PHI --format json
 ```
 
 ### Box Score
@@ -95,48 +95,48 @@ Show the line score for any game (in-progress or final).
 
 ```bash
 # By team abbreviation (today's game)
-python scripts/baseball.py score PHI
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py score PHI
 
 # By game PK (works for any game, past or present)
-python scripts/baseball.py score 718415
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py score 718415
 
 # By team abbreviation for a past date
-python scripts/baseball.py score PHI --date 02/15/2026
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py score PHI --date 02/15/2026
 
 # JSON output
-python scripts/baseball.py score PHI --format json
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py score PHI --format json
 ```
 
 ### Search Players
 
 ```bash
 # Search by last name
-python scripts/baseball.py player Judge
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py player Judge
 
 # Search by full name
-python scripts/baseball.py player Aaron Judge
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py player Aaron Judge
 
 # Filter by team
-python scripts/baseball.py player Wheeler --team PHI
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py player Wheeler --team PHI
 
 # JSON output
-python scripts/baseball.py player Judge --format json
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py player Judge --format json
 ```
 
 ### Player Stats
 
 ```bash
 # By player ID (from player search results)
-python scripts/baseball.py stats 592450
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py stats 592450
 
 # By player name (auto-resolves if unique match)
-python scripts/baseball.py stats Aaron Judge
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py stats Aaron Judge
 
 # Specific season
-python scripts/baseball.py stats Aaron Judge --season 2024
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py stats Aaron Judge --season 2024
 
 # JSON output
-python scripts/baseball.py stats 592450 --format json
+python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py stats 592450 --format json
 ```
 
 ## Output Format
@@ -274,7 +274,7 @@ Zack Wheeler  #45  P  |  Philadelphia Phillies  |  L/R  |  Age 35
 
 ## Team Abbreviations
 
-Run `python scripts/baseball.py teams` to list all abbreviations. Partial team names also work (e.g., "Phillies", "Dodgers", "Red Sox").
+Run `python3 /home/claw/.openclaw/workspace/skills/baseball/scripts/baseball.py teams` to list all abbreviations. Partial team names also work (e.g., "Phillies", "Dodgers", "Red Sox").
 
 ARI, ATL, BAL, BOS, CHC, CWS, CIN, CLE, COL, DET, HOU, KC, LAA, LAD, MIA, MIL, MIN, NYM, NYY, OAK, PHI, PIT, SD, SF, SEA, STL, TB, TEX, TOR, WSH
 
